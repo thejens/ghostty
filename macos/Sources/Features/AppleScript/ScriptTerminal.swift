@@ -1,4 +1,5 @@
 import AppKit
+import GhosttyKit
 
 /// AppleScript-facing wrapper around a live Ghostty terminal surface.
 ///
@@ -14,6 +15,8 @@ import AppKit
 /// - `property working directory` -> `@objc(workingDirectory)` getter below.
 /// - `property pid` -> `@objc(pid)` getter below.
 /// - `property tty` -> `@objc(tty)` getter below.
+/// - `property contents` -> `@objc(contents)` getter below.
+/// - `property history` -> `@objc(history)` getter below.
 ///
 /// We keep only a weak reference to the underlying `SurfaceView` so this
 /// wrapper never extends the terminal's lifetime.
@@ -84,6 +87,29 @@ final class ScriptTerminal: NSObject {
     var tty: String {
         guard NSApp.isAppleScriptEnabled else { return "" }
         return surfaceView?.surfaceModel?.ttyName ?? ""
+    }
+
+    /// Exposed as the AppleScript `contents` property.
+    ///
+    /// Reads the active area rather than the viewport so the result reflects
+    /// what the running program is drawing, even if the user has scrolled up.
+    /// Read fresh on every access (no caching) because scripts commonly send
+    /// input and then immediately read back the result.
+    @objc(contents)
+    var contents: String {
+        guard NSApp.isAppleScriptEnabled else { return "" }
+        return surfaceView?.readText(GHOSTTY_POINT_ACTIVE) ?? ""
+    }
+
+    /// Exposed as the AppleScript `history` property.
+    ///
+    /// Scrollback plus the active area of the current screen. When a
+    /// full-screen program is using the alternate screen, that screen has no
+    /// scrollback, so this is equivalent to `contents`.
+    @objc(history)
+    var history: String {
+        guard NSApp.isAppleScriptEnabled else { return "" }
+        return surfaceView?.readText(GHOSTTY_POINT_SCREEN) ?? ""
     }
 
     /// Used by command handling (`perform action ... on <terminal>`).

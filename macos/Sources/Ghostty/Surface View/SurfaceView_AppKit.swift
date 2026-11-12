@@ -252,44 +252,10 @@ extension Ghostty {
 
             // Our cache of screen data
             cachedScreenContents = .init(duration: .milliseconds(500)) { [weak self] in
-                guard let self else { return "" }
-                guard let surface = self.surface else { return "" }
-                var text = ghostty_text_s()
-                let sel = ghostty_selection_s(
-                    top_left: ghostty_point_s(
-                        tag: GHOSTTY_POINT_SCREEN,
-                        coord: GHOSTTY_POINT_COORD_TOP_LEFT,
-                        x: 0,
-                        y: 0),
-                    bottom_right: ghostty_point_s(
-                        tag: GHOSTTY_POINT_SCREEN,
-                        coord: GHOSTTY_POINT_COORD_BOTTOM_RIGHT,
-                        x: 0,
-                        y: 0),
-                    rectangle: false)
-                guard ghostty_surface_read_text(surface, sel, &text) else { return "" }
-                defer { ghostty_surface_free_text(surface, &text) }
-                return String(cString: text.text)
+                self?.readText(GHOSTTY_POINT_SCREEN) ?? ""
             }
             cachedVisibleContents = .init(duration: .milliseconds(500)) { [weak self] in
-                guard let self else { return "" }
-                guard let surface = self.surface else { return "" }
-                var text = ghostty_text_s()
-                let sel = ghostty_selection_s(
-                    top_left: ghostty_point_s(
-                        tag: GHOSTTY_POINT_VIEWPORT,
-                        coord: GHOSTTY_POINT_COORD_TOP_LEFT,
-                        x: 0,
-                        y: 0),
-                    bottom_right: ghostty_point_s(
-                        tag: GHOSTTY_POINT_VIEWPORT,
-                        coord: GHOSTTY_POINT_COORD_BOTTOM_RIGHT,
-                        x: 0,
-                        y: 0),
-                    rectangle: false)
-                guard ghostty_surface_read_text(surface, sel, &text) else { return "" }
-                defer { ghostty_surface_free_text(surface, &text) }
-                return String(cString: text.text)
+                self?.readText(GHOSTTY_POINT_VIEWPORT) ?? ""
             }
 
             // Set a timer to show the ghost emoji after 500ms if no title is set
@@ -2341,6 +2307,41 @@ extension Ghostty.SurfaceView {
         }
 
         return false
+    }
+}
+
+// MARK: Text Reading
+
+extension Ghostty.SurfaceView {
+    /// Reads the full text of one coordinate space of the terminal, uncached.
+    ///
+    /// The tag picks the region:
+    /// - `GHOSTTY_POINT_ACTIVE`: the active area (what a program running in
+    ///   the terminal currently sees), independent of the user's scroll position.
+    /// - `GHOSTTY_POINT_VIEWPORT`: whatever is currently scrolled into view.
+    /// - `GHOSTTY_POINT_SCREEN`: all scrollback plus the active area.
+    ///
+    /// Callers that read frequently (e.g. accessibility) should go through
+    /// `cachedScreenContents`/`cachedVisibleContents` instead; this always hits
+    /// the terminal and the screen variant can be large.
+    func readText(_ tag: ghostty_point_tag_e) -> String {
+        guard let surface else { return "" }
+        var text = ghostty_text_s()
+        let sel = ghostty_selection_s(
+            top_left: ghostty_point_s(
+                tag: tag,
+                coord: GHOSTTY_POINT_COORD_TOP_LEFT,
+                x: 0,
+                y: 0),
+            bottom_right: ghostty_point_s(
+                tag: tag,
+                coord: GHOSTTY_POINT_COORD_BOTTOM_RIGHT,
+                x: 0,
+                y: 0),
+            rectangle: false)
+        guard ghostty_surface_read_text(surface, sel, &text) else { return "" }
+        defer { ghostty_surface_free_text(surface, &text) }
+        return String(cString: text.text)
     }
 }
 

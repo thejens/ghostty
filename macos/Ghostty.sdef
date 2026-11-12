@@ -98,6 +98,8 @@
       <property name="working directory" code="Gwdr" type="text" access="r" description="Current working directory for the terminal process."/>
       <property name="pid" code="Gpid" type="integer" access="r" description="PID of the foreground process in this terminal."/>
       <property name="tty" code="Gtty" type="text" access="r" description="TTY device path for this terminal (e.g. /dev/ttys016)."/>
+      <property name="contents" code="Gcnt" type="text" access="r" description="Text currently on the terminal's active screen, regardless of scroll position."/>
+      <property name="history" code="Ghis" type="text" access="r" description="Scrollback plus the active screen. While a full-screen program uses the alternate screen, this has no scrollback."/>
       <responds-to command="split">
         <cocoa method="handleSplitCommand:"/>
       </responds-to>
